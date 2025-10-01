@@ -4,6 +4,6 @@ import "time"
 
 type Location struct {
 	Lat       float64
-	Lon       float64
+	Lng       float64
 	Timestamp time.Time
 }

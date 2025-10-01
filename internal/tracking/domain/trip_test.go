@@ -20,8 +20,8 @@ func TestTrip(t *testing.T) {
 
 		assert.Len(t, trip.Followers, 0)
 
-		f1 := Follower{ID: 1, Name: "follower_1"}
-		f2 := Follower{ID: 2, Name: "follower_2"}
+		f1 := Follower{ID: 1}
+		f2 := Follower{ID: 2}
 
 		trip.AddFollower(f1)
 		trip.AddFollower(f2)
