@@ -1,4 +1,4 @@
-package errs
+package shared
 
 type Error interface {
 	error
