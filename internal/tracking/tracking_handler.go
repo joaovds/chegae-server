@@ -17,11 +17,12 @@ func NewTripHandler(service TripService) *TripHandler {
 }
 
 func (h *TripHandler) StartTrip(w http.ResponseWriter, r *http.Request) {
-	if err := h.service.StartTrip(r.Context()); err != nil {
+	output, err := h.service.StartTrip(r.Context())
+	if err != nil {
 		http.Error(w, err.GetMessage(), err.GetCode())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(output)
 }
 
 func (h *TripHandler) GetTrip(w http.ResponseWriter, r *http.Request) {
@@ -38,6 +39,5 @@ func (h *TripHandler) GetTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(output)
 }

@@ -24,7 +24,7 @@ type (
 
 type (
 	TripService interface {
-		StartTrip(ctx context.Context) shared.Error
+		StartTrip(ctx context.Context) (*dtos.StartTripOutput, shared.Error)
 		GetTrip(ctx context.Context, input *dtos.GetTripInput) (*dtos.GetTripOutput, shared.Error)
 	}
 

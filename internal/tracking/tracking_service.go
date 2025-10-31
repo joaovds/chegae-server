@@ -16,14 +16,17 @@ func NewTripService(repo TripRepository) TripService {
 	return &tripService{repo}
 }
 
-func (s *tripService) StartTrip(ctx context.Context) shared.Error {
+func (s *tripService) StartTrip(ctx context.Context) (*dtos.StartTripOutput, shared.Error) {
 	trip := &Trip{
 		StartedAt: time.Now(),
 	}
 	if err := s.repo.Create(ctx, trip); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &dtos.StartTripOutput{
+		ID:        trip.ID,
+		StartedAt: trip.StartedAt,
+	}, nil
 }
 
 func (s *tripService) GetTrip(ctx context.Context, input *dtos.GetTripInput) (*dtos.GetTripOutput, shared.Error) {
