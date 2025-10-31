@@ -32,4 +32,8 @@ type (
 		Create(ctx context.Context, trip *Trip) shared.Error
 		FindByID(ctx context.Context, id int) (*Trip, shared.Error)
 	}
+
+	TrackingService interface {
+		ReceiveLiveLocations(ctx context.Context, tripID int, updates <-chan dtos.ReceiveLiveLocationsInput) shared.Error
+	}
 )

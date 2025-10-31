@@ -1,10 +1,12 @@
 package tracking
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/websocket"
 	"github.com/joaovds/chegae-server/internal/tracking/dtos"
 )
 
@@ -26,7 +28,7 @@ func (h *TripHandler) StartTrip(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TripHandler) GetTrip(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("trip_id")
+	idStr := r.PathValue("trip_id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "invalid trip_id", http.StatusBadRequest)
@@ -40,4 +42,57 @@ func (h *TripHandler) GetTrip(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(output)
+}
+
+// ----- .. -----
+
+type TrackingHandler struct {
+	service TrackingService
+}
+
+func NewTrackingHandler(service TrackingService) *TrackingHandler {
+	return &TrackingHandler{service}
+}
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+func (h *TrackingHandler) ReceiveLiveLocationsWS(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		http.Error(w, "failed to start WebSocket", http.StatusInternalServerError)
+		return
+	}
+	defer conn.Close()
+
+	tripID, err := strconv.Atoi(r.PathValue("trip_id"))
+	if err != nil {
+		http.Error(w, "invalid trip_id", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	updates := make(chan dtos.ReceiveLiveLocationsInput)
+
+	go func() {
+		h.service.ReceiveLiveLocations(ctx, tripID, updates)
+	}()
+
+	for {
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			close(updates)
+			return
+		}
+
+		var loc dtos.ReceiveLiveLocationsInput
+		if err := json.Unmarshal(msg, &loc); err != nil {
+			continue
+		}
+
+		updates <- loc
+	}
 }

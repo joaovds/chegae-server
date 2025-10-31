@@ -2,6 +2,7 @@ package tracking
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/joaovds/chegae-server/internal/shared"
@@ -41,4 +42,27 @@ func (s *tripService) GetTrip(ctx context.Context, input *dtos.GetTripInput) (*d
 			StartedAt: trip.StartedAt,
 		},
 	}, nil
+}
+
+// ----- .. -----
+
+type trackingService struct{}
+
+func NewTrackingService() TrackingService {
+	return &trackingService{}
+}
+
+func (s *trackingService) ReceiveLiveLocations(ctx context.Context, tripID int, updates <-chan dtos.ReceiveLiveLocationsInput) shared.Error {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case loc, ok := <-updates:
+			if !ok {
+				return nil
+			}
+
+			fmt.Printf("[Trip %d] new location received: %.6f, %.6f\n", loc.TripID, loc.Lat, loc.Lng)
+		}
+	}
 }
