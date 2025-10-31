@@ -35,5 +35,6 @@ func (m *Module) SetupHandlers(mux *http.ServeMux) {
 	moduleMux.HandleFunc("GET /trips/{trip_id}", tripHandlers.GetTrip)
 
 	trackingHandlers := NewTrackingHandler(m.services.trackingService)
-	moduleMux.HandleFunc("/ws/{trip_id}", trackingHandlers.ReceiveLiveLocationsWS)
+	moduleMux.HandleFunc("/sender/ws/{trip_id}", trackingHandlers.ReceiveLiveLocationsWS)
+	moduleMux.HandleFunc("/ws/{trip_id}", trackingHandlers.TrackLiveLocationsWS)
 }

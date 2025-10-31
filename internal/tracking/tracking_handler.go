@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/websocket"
+	"github.com/joaovds/chegae-server/internal/shared"
 	"github.com/joaovds/chegae-server/internal/tracking/dtos"
 )
 
@@ -58,7 +59,37 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
+type wsClient struct {
+	id   int
+	conn *websocket.Conn
+}
+
+func (c *wsClient) GetID() int {
+	return c.id
+}
+
+func (c *wsClient) GetConn() LiveConnection {
+	return &liveConnectionWS{conn: c.conn}
+}
+
+type liveConnectionWS struct {
+	conn *websocket.Conn
+}
+
+func (l *liveConnectionWS) SendLocationUpdate(loc dtos.LiveLocations) shared.Error {
+	if err := l.conn.WriteJSON(loc); err != nil {
+		return shared.NewErr("failed to send location")
+	}
+	return nil
+}
+
 func (h *TrackingHandler) ReceiveLiveLocationsWS(w http.ResponseWriter, r *http.Request) {
+	tripID, err := strconv.Atoi(r.PathValue("trip_id"))
+	if err != nil {
+		http.Error(w, "invalid trip_id", http.StatusBadRequest)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		http.Error(w, "failed to start WebSocket", http.StatusInternalServerError)
@@ -66,19 +97,13 @@ func (h *TrackingHandler) ReceiveLiveLocationsWS(w http.ResponseWriter, r *http.
 	}
 	defer conn.Close()
 
-	tripID, err := strconv.Atoi(r.PathValue("trip_id"))
-	if err != nil {
-		http.Error(w, "invalid trip_id", http.StatusBadRequest)
-		return
-	}
-
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	updates := make(chan dtos.ReceiveLiveLocationsInput)
+	updates := make(chan dtos.LiveLocations)
 
 	go func() {
-		h.service.ReceiveLiveLocations(ctx, tripID, updates)
+		h.service.StreamLiveLocations(ctx, tripID, updates)
 	}()
 
 	for {
@@ -88,11 +113,38 @@ func (h *TrackingHandler) ReceiveLiveLocationsWS(w http.ResponseWriter, r *http.
 			return
 		}
 
-		var loc dtos.ReceiveLiveLocationsInput
+		var loc dtos.LiveLocations
 		if err := json.Unmarshal(msg, &loc); err != nil {
 			continue
 		}
 
 		updates <- loc
 	}
+}
+
+func (h *TrackingHandler) TrackLiveLocationsWS(w http.ResponseWriter, r *http.Request) {
+	tripID, err := strconv.Atoi(r.PathValue("trip_id"))
+	if err != nil {
+		http.Error(w, "invalid trip_id", http.StatusBadRequest)
+		return
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		http.Error(w, "failed to start WebSocket", http.StatusInternalServerError)
+		return
+	}
+	defer conn.Close()
+
+	client := &wsClient{
+		id:   1,
+		conn: conn,
+	}
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	h.service.TrackLiveLocations(ctx, tripID, client)
+
+	<-ctx.Done()
 }

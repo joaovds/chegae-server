@@ -3,7 +3,7 @@ package dtos
 import "time"
 
 type (
-	ReceiveLiveLocationsInput struct {
+	LiveLocations struct {
 		Lat       float64   `json:"lat"`
 		Lng       float64   `json:"lgn"`
 		TripID    int       `json:"trip_id"`

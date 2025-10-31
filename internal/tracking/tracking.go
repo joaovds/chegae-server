@@ -14,11 +14,13 @@ type (
 		StartedAt time.Time
 	}
 
-	Location struct {
-		Lat       float64
-		Lng       float64
-		TripID    int
-		Timestamp time.Time
+	Client interface {
+		GetID() int
+		GetConn() LiveConnection
+	}
+
+	LiveConnection interface {
+		SendLocationUpdate(loc dtos.LiveLocations) shared.Error
 	}
 )
 
@@ -34,6 +36,7 @@ type (
 	}
 
 	TrackingService interface {
-		ReceiveLiveLocations(ctx context.Context, tripID int, updates <-chan dtos.ReceiveLiveLocationsInput) shared.Error
+		StreamLiveLocations(ctx context.Context, tripID int, updates <-chan dtos.LiveLocations) shared.Error
+		TrackLiveLocations(ctx context.Context, tripID int, client Client) shared.Error
 	}
 )
